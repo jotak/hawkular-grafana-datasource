@@ -52,3 +52,4 @@ docker build -t hawkular/hawkular-grafana-datasource .
 # This will run the image on http://localhost:3000/
 docker run -i -p 3000:3000 --name hawkular-grafana-datasource --rm hawkular/hawkular-grafana-datasource
 ----
+toto

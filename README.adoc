@@ -53,3 +53,4 @@ docker build -t hawkular/hawkular-grafana-datasource .
 docker run -i -p 3000:3000 --name hawkular-grafana-datasource --rm hawkular/hawkular-grafana-datasource
 ----
 toto
+titi

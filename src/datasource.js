@@ -93,7 +93,6 @@ export class HawkularDatasource {
 
   suggestTags(type, key) {
     if (!key) {
-      // Need at least some characters typed in order to suggest something
       return this.q.when([]);
     }
     return this.backendSrv.datasourceRequest({
@@ -107,6 +106,18 @@ export class HawkularDatasource {
         });
       }
       return [];
+    });
+  }
+
+  suggestTagKeys(type) {
+    return this.backendSrv.datasourceRequest({
+      url: this.url + '/metrics/tags',
+      method: 'GET',
+      headers: this.headers
+    }).then(result => {
+      return result.data.map(key => {
+        return {text: key, value: key};
+      });
     });
   }
 

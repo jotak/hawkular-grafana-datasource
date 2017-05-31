@@ -35,12 +35,12 @@ System.register(['./tagsKVPairsController'], function (_export, _context) {
       }();
 
       _export('QueryProcessor', QueryProcessor = function () {
-        function QueryProcessor(q, backendSrv, variables, capabilities, url, headers, typeResources) {
+        function QueryProcessor(q, backendSrv, variablesHelper, capabilities, url, headers, typeResources) {
           _classCallCheck(this, QueryProcessor);
 
           this.q = q;
           this.backendSrv = backendSrv;
-          this.variables = variables;
+          this.variablesHelper = variablesHelper;
           this.capabilities = capabilities;
           this.url = url;
           this.headers = headers;
@@ -66,7 +66,7 @@ System.register(['./tagsKVPairsController'], function (_export, _context) {
               };
               var multipleMetrics = true;
               if (target.id) {
-                var metricIds = _this.variables.resolve(target.id, options);
+                var metricIds = _this.variablesHelper.resolve(target.id, options);
                 if (caps.QUERY_POST_ENDPOINTS) {
                   if (!target.seriesAggFn || target.seriesAggFn === 'none') {
                     postData.ids = metricIds;
@@ -85,13 +85,13 @@ System.register(['./tagsKVPairsController'], function (_export, _context) {
               } else {
                 if (caps.TAGS_QUERY_LANGUAGE) {
                   if (target.tagsQL !== undefined && target.tagsQL.length > 0) {
-                    postData.tags = _this.variables.resolveToString(target.tagsQL, options);
+                    postData.tags = _this.variablesHelper.resolveForQL(target.tagsQL, options);
                   } else {
                     return _this.q.when([]);
                   }
                 } else {
                   if (target.tags !== undefined && target.tags.length > 0) {
-                    postData.tags = tagsModelToString(target.tags, _this.variables, options);
+                    postData.tags = tagsModelToString(target.tags, _this.variablesHelper, options);
                   } else {
                     return _this.q.when([]);
                   }

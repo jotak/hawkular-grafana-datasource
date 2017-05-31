@@ -148,6 +148,9 @@ describe('HawkularDatasource', function () {
       }]
     };
 
+    ctx.templateSrv.variables = [{
+      name: 'app'
+    }];
     ctx.templateSrv.replace = function (target, vars) {
       expect(target).to.equal('$app');
       return "{app_1,app_2}";
@@ -699,6 +702,71 @@ describe('HawkularDatasource', function () {
       expect(result).to.have.length(2);
       expect(result[0]).to.deep.equal({ text: 'host', value: 'host' });
       expect(result[1]).to.deep.equal({ text: 'app', value: 'app' });
+    }).then(function (v) {
+      return done();
+    }, function (err) {
+      return done(err);
+    });
+  });
+
+  it('should resolve variables in annotations', function (done) {
+    var options = {
+      range: {
+        from: 15,
+        to: 30
+      },
+      annotation: {
+        query: "$who.timeline",
+        name: "Timeline"
+      }
+    };
+
+    ctx.templateSrv.variables = [{
+      name: 'who'
+    }];
+    ctx.templateSrv.replace = function (target, vars) {
+      expect(target).to.equal('$who');
+      return "{your,my}";
+    };
+
+    ctx.backendSrv.datasourceRequest = function (request) {
+      var pathElements = parsePathElements(request);
+      expect(pathElements).to.have.length(5);
+      expect(pathElements.slice(0, 2)).to.deep.equal(hPath.split('/'));
+      expect(pathElements.slice(2)).to.deep.equal(['strings', 'raw', 'query']);
+      expect(request.data.ids).to.deep.equal(['your.timeline', 'my.timeline']);
+
+      return ctx.$q.when({
+        status: 200,
+        data: [{
+          id: "your.timeline",
+          data: [{
+            timestamp: 15,
+            value: 'start'
+          }]
+        }, {
+          id: "my.timeline",
+          data: [{
+            timestamp: 13,
+            value: 'start'
+          }]
+        }]
+      });
+    };
+
+    ctx.ds.annotationQuery(options).then(function (result) {
+      expect(result).to.have.length(2);
+      expect(result[0].annotation).to.deep.equal({ query: "$who.timeline", name: "Timeline" });
+      expect(result[0].time).to.equal(15);
+      expect(result[0].title).to.equal("Timeline");
+      expect(result[0].tags).to.equal('your.timeline');
+      expect(result[0].text).to.equal("start");
+
+      expect(result[1].annotation).to.deep.equal({ query: "$who.timeline", name: "Timeline" });
+      expect(result[1].time).to.equal(13);
+      expect(result[1].title).to.equal("Timeline");
+      expect(result[1].tags).to.equal('my.timeline');
+      expect(result[1].text).to.equal("start");
     }).then(function (v) {
       return done();
     }, function (err) {

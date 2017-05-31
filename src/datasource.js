@@ -1,5 +1,5 @@
 import _ from "lodash";
-import {Variables} from './variables';
+import {VariablesHelper} from './variablesHelper';
 import {Capabilities} from './capabilities';
 import {QueryProcessor} from './queryProcessor';
 import {modelToString as tagsModelToString} from './tagsKVPairsController';
@@ -26,9 +26,9 @@ export class HawkularDatasource {
       "counter": "counters",
       "availability": "availability"
     };
-    this.variables = new Variables(templateSrv);
+    this.variablesHelper = new VariablesHelper(templateSrv);
     this.capabilitiesPromise = this.queryVersion().then(version => new Capabilities(version));
-    this.queryProcessor = new QueryProcessor($q, backendSrv, this.variables, this.capabilitiesPromise, this.url, this.headers, this.typeResources);
+    this.queryProcessor = new QueryProcessor($q, backendSrv, this.variablesHelper, this.capabilitiesPromise, this.url, this.headers, this.typeResources);
   }
 
   query(options) {
@@ -72,46 +72,55 @@ export class HawkularDatasource {
   }
 
   annotationQuery(options) {
+    const metricIds = this.variablesHelper.resolve(options.annotation.query, options);
     return this.backendSrv.datasourceRequest({
       url: this.url + '/strings/raw/query',
       data: {
         start: options.range.from.valueOf(),
         end: options.range.to.valueOf(),
         order: 'ASC',
-        ids: [options.annotation.query]
+        ids: metricIds
       },
       method: 'POST',
       headers: this.headers
-    }).then(response => response.status == 200 ? response.data[0].data : [])
-    .then(data => data.map(dp => {
-      let annot = {
-        annotation: options.annotation,
-        time: dp.timestamp,
-        title: options.annotation.name,
-        tags: undefined,
-        text: dp.value
-      };
-      if (dp.tags) {
-        let tags = [];
-        for (let key in dp.tags) {
-          if (dp.tags.hasOwnProperty(key)) {
-            tags.push(dp.tags[key].replace(' ', '_'));
+    }).then(response => response.status == 200 ? response.data : [])
+    .then(metrics => {
+      let allAnnotations = [];
+      metrics.forEach(metric => {
+        metric.data.forEach(dp => {
+          let annot = {
+            annotation: options.annotation,
+            time: dp.timestamp,
+            title: options.annotation.name,
+            text: dp.value
+          };
+          let tags = [];
+          if (metricIds.length > 1) {
+            tags.push(metric.id);
           }
-        }
-        if (tags.length > 0) {
-          annot.tags = tags.join(' ');
-        }
-      }
-      return annot;
-    }));
+          if (dp.tags) {
+            for (let key in dp.tags) {
+              if (dp.tags.hasOwnProperty(key)) {
+                tags.push(dp.tags[key].replace(' ', '_'));
+              }
+            }
+          }
+          if (tags.length > 0) {
+            annot.tags = tags.join(' ');
+          }
+          allAnnotations.push(annot);
+        });
+      });
+      return allAnnotations;
+    });
   }
 
   suggestQueries(target) {
     let url = this.url + '/metrics?type=' + target.type;
     if (target.tagsQL && target.tagsQL.length > 0) {
-      url += "&tags=" + this.variables.resolveToString(target.tagsQL, {});
+      url += "&tags=" + this.variablesHelper.resolveForQL(target.tagsQL, {});
     } else if (target.tags && target.tags.length > 0) {
-      url += "&tags=" + tagsModelToString(target.tags, this.variables, {});
+      url += "&tags=" + tagsModelToString(target.tags, this.variablesHelper, {});
     }
     return this.backendSrv.datasourceRequest({
       url: url,
@@ -195,7 +204,7 @@ export class HawkularDatasource {
   }
 
   runWithResolvedVariables(target, func) {
-    const resolved = this.variables.resolve(target, {});
+    const resolved = this.variablesHelper.resolve(target, {});
     return this.q.all(resolved.map(p => func(p)))
       .then(result => _.flatten(result));
   }

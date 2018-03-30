@@ -77,6 +77,18 @@ describe('Variables', () => {
     done();
   });
 
+  it('should resolve to unquoted string', done => {
+    const resolved = ctx.variablesHelper.resolveForQL("unquote_vars:app IN [$app] AND container NOT IN ['a', $container, 'z']", ctx.options);
+    expect(resolved).to.deep.equal("app IN [app_1,app_2] AND container NOT IN ['a', 1234,5678,90, 'z']");
+    done();
+  });
+
+  it('should resolve to unquoted string with single value', done => {
+    const resolved = ctx.variablesHelper.resolveForQL("unquote_vars:host IN [$host]", ctx.options);
+    expect(resolved).to.deep.equal("host IN [cartago]");
+    done();
+  });
+
   it('should resolve variable in word with multiple occurrences', done => {
     const resolved = ctx.variablesHelper.resolve("$app/$app_memory_usage", ctx.options);
     expect(resolved).to.deep.equal(['app_1/app_1_memory_usage', 'app_2/app_2_memory_usage']);

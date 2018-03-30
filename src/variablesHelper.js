@@ -29,11 +29,13 @@ export class VariablesHelper {
   }
 
   resolveForQL(target, options) {
+    if (target.indexOf('unquote_vars:') == 0) {
+      return this.templateSrv.replace(target.substring(13), options.scopedVars, values => {
+        return _.isArray(values) ? values.join(',') : values;
+      });
+    }
     return this.templateSrv.replace(target, options.scopedVars, values => {
-      if (_.isArray(values)) {
-        return values.map(v => `'${v}'`).join(',');
-      }
-      return `'${values}'`;
+      return (_.isArray(values)) ? values.map(v => `'${v}'`).join(',') : `'${values}'`;
     });
   }
 
